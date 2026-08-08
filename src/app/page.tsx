@@ -20,9 +20,14 @@ export default function HomePage() {
             <a href="#about" className="hover:text-white transition">About</a>
             <a href="#contact" className="hover:text-white transition">Contact</a>
           </div>
-          <a href="#quote" className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition">
-            Get a Quote
-          </a>
+          <div className="flex gap-3 items-center">
+            <a href="/api/auth/signin" className="text-gray-300 hover:text-white text-sm font-medium transition">
+              Sign In
+            </a>
+            <a href="#quote" className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition">
+              Get a Quote
+            </a>
+          </div>
         </div>
       </nav>
 
