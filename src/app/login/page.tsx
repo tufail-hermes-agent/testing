@@ -1,39 +1,81 @@
 "use client";
 
-import { signIn } from "next-auth/react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { signIn } from "next-auth/react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const signInSchema = z.object({
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+const signUpSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+type SignInValues = z.infer<typeof signInSchema>;
+type SignUpValues = z.infer<typeof signUpSchema>;
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  const signInForm = useForm<SignInValues>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: { email: "", password: "" },
+  });
 
+  const signUpForm = useForm<SignUpValues>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: { name: "", email: "", password: "" },
+  });
+
+  async function onSignIn(values: SignInValues) {
+    setLoading(true);
     const result = await signIn("credentials", {
-      email,
-      password,
+      email: values.email,
+      password: values.password,
       redirect: false,
     });
+    setLoading(false);
 
     if (result?.error) {
-      setError(mode === "signin" ? "Invalid email or password" : "Sign up failed. Try again.");
-      setLoading(false);
+      toast.error("Invalid email or password");
     } else {
+      toast.success("Signed in successfully");
       window.location.href = "/";
     }
-  };
+  }
+
+  async function onSignUp(values: SignUpValues) {
+    setLoading(true);
+    const result = await signIn("credentials", {
+      email: values.email,
+      password: values.password,
+      redirect: false,
+    });
+    setLoading(false);
+
+    if (result?.error) {
+      toast.error("Sign up failed. Please try again.");
+    } else {
+      toast.success("Account created successfully");
+      window.location.href = "/";
+    }
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
           <span className="text-3xl font-extrabold tracking-tight text-white">
             Swift<span className="text-orange-500">Haul</span>
@@ -41,106 +83,102 @@ export default function LoginPage() {
           <p className="text-gray-400 mt-2 text-sm">Transportation & Logistics</p>
         </div>
 
-        {/* Card */}
-        <div className="bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden">
-          {/* Tabs */}
-          <div className="flex border-b border-white/10">
-            <button
-              onClick={() => { setMode("signin"); setError(""); }}
-              className={`flex-1 py-4 text-sm font-semibold transition ${
-                mode === "signin"
-                  ? "text-orange-500 border-b-2 border-orange-500"
-                  : "text-gray-500 hover:text-gray-300"
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => { setMode("signup"); setError(""); }}
-              className={`flex-1 py-4 text-sm font-semibold transition ${
-                mode === "signup"
-                  ? "text-orange-500 border-b-2 border-orange-500"
-                  : "text-gray-500 hover:text-gray-300"
-              }`}
-            >
-              Sign Up
-            </button>
-          </div>
+        <Card className="border-white/10 bg-zinc-900">
+          <CardHeader>
+            <Tabs defaultValue="signin" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-zinc-800">
+                <TabsTrigger value="signin">Sign In</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              </TabsList>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-8 space-y-5">
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-lg px-4 py-3">
-                {error}
-              </div>
-            )}
+              <TabsContent value="signin">
+                <form onSubmit={signInForm.handleSubmit(onSignIn)} className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signin-email">Email</Label>
+                    <Input
+                      id="signin-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      {...signInForm.register("email")}
+                      className="bg-black/50 border-white/10"
+                    />
+                    {signInForm.formState.errors.email && (
+                      <p className="text-red-400 text-xs">{signInForm.formState.errors.email.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signin-password">Password</Label>
+                    <Input
+                      id="signin-password"
+                      type="password"
+                      placeholder="••••••••"
+                      {...signInForm.register("password")}
+                      className="bg-black/50 border-white/10"
+                    />
+                    {signInForm.formState.errors.password && (
+                      <p className="text-red-400 text-xs">{signInForm.formState.errors.password.message}</p>
+                    )}
+                  </div>
+                  <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600" disabled={loading}>
+                    {loading ? "Signing in..." : "Sign In"}
+                  </Button>
+                </form>
+              </TabsContent>
 
-            {mode === "signup" && (
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Full Name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="John Doe"
-                  required
-                  className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition"
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="block text-gray-300 text-sm font-medium mb-2">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
-                className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition"
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-300 text-sm font-medium mb-2">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                minLength={6}
-                className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition"
-            >
-              {loading ? "Please wait..." : mode === "signin" ? "Sign In" : "Create Account"}
-            </button>
-
-            {mode === "signin" && (
-              <p className="text-gray-500 text-xs text-center">
-                Don&apos;t have an account?{" "}
-                <button type="button" onClick={() => setMode("signup")} className="text-orange-500 hover:underline">
-                  Sign up
-                </button>
-              </p>
-            )}
-            {mode === "signup" && (
-              <p className="text-gray-500 text-xs text-center">
-                Already have an account?{" "}
-                <button type="button" onClick={() => setMode("signin")} className="text-orange-500 hover:underline">
-                  Sign in
-                </button>
-              </p>
-            )}
-          </form>
-        </div>
-
+              <TabsContent value="signup">
+                <form onSubmit={signUpForm.handleSubmit(onSignUp)} className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-name">Full Name</Label>
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      placeholder="John Doe"
+                      {...signUpForm.register("name")}
+                      className="bg-black/50 border-white/10"
+                    />
+                    {signUpForm.formState.errors.name && (
+                      <p className="text-red-400 text-xs">{signUpForm.formState.errors.name.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      {...signUpForm.register("email")}
+                      className="bg-black/50 border-white/10"
+                    />
+                    {signUpForm.formState.errors.email && (
+                      <p className="text-red-400 text-xs">{signUpForm.formState.errors.email.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      placeholder="••••••••"
+                      {...signUpForm.register("password")}
+                      className="bg-black/50 border-white/10"
+                    />
+                    {signUpForm.formState.errors.password && (
+                      <p className="text-red-400 text-xs">{signUpForm.formState.errors.password.message}</p>
+                    )}
+                  </div>
+                  <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600" disabled={loading}>
+                    {loading ? "Creating account..." : "Create Account"}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-500 text-xs text-center">
+              New to SwiftHaul? Your account is created automatically on first sign in.
+            </p>
+          </CardContent>
+        </Card>
         <p className="text-gray-600 text-xs text-center mt-6">
           Secured by NextAuth · Passwords hashed with bcrypt
         </p>
