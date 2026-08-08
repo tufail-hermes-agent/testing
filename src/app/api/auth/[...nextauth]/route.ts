@@ -1,5 +1,4 @@
 import NextAuth, { type NextAuthOptions } from "next-auth";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { PrismaClient } from "@prisma/client";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
@@ -7,14 +6,13 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   providers: [
     CredentialsProvider({
       name: "Email & Password",
       credentials: {
-        email: { label: "Email", type: "email", placeholder: "you@example.com" },
+        email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
@@ -25,7 +23,7 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!user) {
-          // Auto-register: create user with hashed password
+          // Auto-register
           const hashed = await bcrypt.hash(credentials.password, 12);
           const newUser = await prisma.user.create({
             data: {
@@ -38,7 +36,6 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (!user.password) return null;
-
         const valid = await bcrypt.compare(credentials.password, user.password);
         if (!valid) return null;
 
